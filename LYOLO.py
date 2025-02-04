@@ -41,11 +41,18 @@ class Down(nn.Module):     # 下采样
         out1 = self.ca(out1)
         return out1
 ########################################################################
+import math
+
+import numpy as np
+import torch
+import torch.nn as nn
+
+
 class FE(nn.Module):   # 特征
     def __init__(self, nin: int, nout: int, h: int, w: int, num_splits: int) -> None:
         super(FE, self).__init__()
         self.FE1 = FE1(nin//2,nout//2,h,w,num_splits)
-        self.FE2 = FE2(nin//2,nout,h//2,w,num_splits)
+        self.FE2 = FE2(nin//2,nout//2,h,w,num_splits)
     def forward(self, x):
         x1,x2 = x.chunk(2,1)
         x1 = self.FE1(x1)
@@ -94,8 +101,8 @@ class FE2(nn.Module):
         self.w = w
         self.num_splits = num_splits
 
-        self.FEE1 = nn.ModuleList(
-            [FEE1(int(self.nin / self.num_splits)) for i in range(self.num_splits)]
+        self.FEE2 = nn.ModuleList(
+            [FEE2(int(self.nin / self.num_splits)) for i in range(self.num_splits)]
         )
 
     def forward(self, x):
@@ -111,36 +118,7 @@ class FE2(nn.Module):
         out = torch.cat(out, dim=1)
 
         return out
-class FE1(nn.Module):
 
-    def __init__(self, nin: int, nout: int, h: int, w: int, num_splits: int) -> None:
-        super(FE1, self).__init__()
-
-        assert nin % num_splits == 0
-
-        self.nin = nin
-        self.nout = nout
-        self.h = h
-        self.w = w
-        self.num_splits = num_splits
-
-        self.subspaces = nn.ModuleList(
-            [SubSpace(int(self.nin / self.num_splits)) for i in range(self.num_splits)]
-        )
-
-    def forward(self, x):
-        group_size = int(self.nin / self.num_splits)
-
-        # split at batch dimension
-        sub_feat = torch.chunk(x, self.num_splits, dim=1)
-
-        out = []
-        for idx, l in enumerate(self.subspaces):
-            out.append(self.subspaces[idx](sub_feat[idx]))
-
-        out = torch.cat(out, dim=1)
-
-        return out
 class FEE1(nn.Module):
     def __init__(self, nin: int) -> None:
         super(FEE1, self).__init__()
